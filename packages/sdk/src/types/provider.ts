@@ -68,10 +68,7 @@ export interface BundlerProvider {
   ): Promise<TransactionResult>;
 
   /** Estimate gas for a user operation */
-  estimateUserOperationGas(
-    ownerPrivateKey: Hex,
-    calls: TransactionRequest[],
-  ): Promise<GasEstimate>;
+  estimateUserOperationGas(ownerPrivateKey: Hex, calls: TransactionRequest[]): Promise<GasEstimate>;
 
   /** Wait for a user operation receipt */
   waitForUserOperationReceipt(userOpHash: Hash): Promise<UserOperationReceipt>;

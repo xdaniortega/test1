@@ -1,4 +1,11 @@
-import { readFileSync, writeFileSync, mkdirSync, existsSync, readdirSync, unlinkSync } from 'node:fs';
+import {
+  readFileSync,
+  writeFileSync,
+  mkdirSync,
+  existsSync,
+  readdirSync,
+  unlinkSync,
+} from 'node:fs';
 import { join } from 'node:path';
 import { homedir } from 'node:os';
 import { KeyManagementError } from '../types/errors.js';

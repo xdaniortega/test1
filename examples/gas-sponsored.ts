@@ -54,15 +54,11 @@ async function main() {
   const RECIPIENT = '0x0000000000000000000000000000000000000001' as Address;
 
   console.log('Sending gas-sponsored transaction (dry run)...');
-  const result = await wallet.sendTransaction(
-    info.ownerAddress.toLowerCase(),
-    PASSWORD,
-    {
-      calls: [{ to: RECIPIENT, value: 0n }],
-      sponsorGas: true,
-      dryRun: true,
-    },
-  );
+  const result = await wallet.sendTransaction(info.ownerAddress.toLowerCase(), PASSWORD, {
+    calls: [{ to: RECIPIENT, value: 0n }],
+    sponsorGas: true,
+    dryRun: true,
+  });
   console.log(`  Result: ${result.success ? 'Success' : 'Failed'}\n`);
 
   // 4. Batched gas-sponsored transaction (dry run)
@@ -75,24 +71,20 @@ async function main() {
   console.log('  Call 1: ERC-20 approve on token contract');
   console.log('  Call 2: Swap on DEX router');
 
-  const batchResult = await wallet.sendTransaction(
-    info.ownerAddress.toLowerCase(),
-    PASSWORD,
-    {
-      calls: [
-        {
-          to: TOKEN_CONTRACT,
-          data: ERC20_TRANSFER_SELECTOR,
-        },
-        {
-          to: DEX_ROUTER,
-          data: ERC20_TRANSFER_SELECTOR,
-        },
-      ],
-      sponsorGas: true,
-      dryRun: true,
-    },
-  );
+  const batchResult = await wallet.sendTransaction(info.ownerAddress.toLowerCase(), PASSWORD, {
+    calls: [
+      {
+        to: TOKEN_CONTRACT,
+        data: ERC20_TRANSFER_SELECTOR,
+      },
+      {
+        to: DEX_ROUTER,
+        data: ERC20_TRANSFER_SELECTOR,
+      },
+    ],
+    sponsorGas: true,
+    dryRun: true,
+  });
 
   console.log(`  Result: ${batchResult.success ? 'Success' : 'Failed'}`);
   console.log('\nBoth calls would execute atomically in a single UserOperation.');

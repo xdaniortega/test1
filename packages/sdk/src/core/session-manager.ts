@@ -1,7 +1,11 @@
 import { randomUUID } from 'node:crypto';
 import { type Address, type Hex } from 'viem';
 import { generatePrivateKey, privateKeyToAccount } from 'viem/accounts';
-import { type SessionKeyConfig, type SessionKeyInfo, type SessionKeyData } from '../types/session.js';
+import {
+  type SessionKeyConfig,
+  type SessionKeyInfo,
+  type SessionKeyData,
+} from '../types/session.js';
 import { SessionKeyError } from '../types/errors.js';
 import { FileStorage } from '../utils/storage.js';
 import { encryptKey, decryptKey } from '../utils/crypto.js';
@@ -71,7 +75,8 @@ export class SessionManager {
         if (!data) return null;
         return {
           ...data.info,
-          isActive: !data.info.isRevoked && data.info.validAfter <= now && data.info.validUntil > now,
+          isActive:
+            !data.info.isRevoked && data.info.validAfter <= now && data.info.validUntil > now,
         };
       })
       .filter((s): s is SessionKeyInfo => s !== null);

@@ -1,9 +1,5 @@
 import { type Command } from 'commander';
-import {
-  AgenticWallet,
-  type SupportedNetwork,
-  type ProviderType,
-} from '@arbitrum/agentic-wallets';
+import { AgenticWallet, type SupportedNetwork, type ProviderType } from '@arbitrum/agentic-wallets';
 import { type Address, type Hex, parseEther } from 'viem';
 import { addGlobalOptions, handleError, requireApiKey, requirePassword } from './common.js';
 
@@ -41,21 +37,17 @@ export function registerSendCommand(program: Command): void {
           apiKey,
         });
 
-        const result = await wallet.sendTransaction(
-          options.wallet.toLowerCase(),
-          password,
-          {
-            calls: [
-              {
-                to: options.to as Address,
-                value: parseEther(options.value),
-                data: options.data as Hex | undefined,
-              },
-            ],
-            sponsorGas: options.sponsorGas,
-            dryRun: options.dryRun,
-          },
-        );
+        const result = await wallet.sendTransaction(options.wallet.toLowerCase(), password, {
+          calls: [
+            {
+              to: options.to as Address,
+              value: parseEther(options.value),
+              data: options.data as Hex | undefined,
+            },
+          ],
+          sponsorGas: options.sponsorGas,
+          dryRun: options.dryRun,
+        });
 
         if (options.dryRun) {
           console.log('Dry run: transaction simulated successfully');

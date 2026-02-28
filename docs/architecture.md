@@ -65,10 +65,7 @@ interface BundlerProvider {
     calls: TransactionRequest[],
     options?: { sponsorGas?: boolean },
   ): Promise<TransactionResult>;
-  estimateUserOperationGas(
-    ownerPrivateKey: Hex,
-    calls: TransactionRequest[],
-  ): Promise<GasEstimate>;
+  estimateUserOperationGas(ownerPrivateKey: Hex, calls: TransactionRequest[]): Promise<GasEstimate>;
   waitForUserOperationReceipt(userOpHash: Hash): Promise<UserOperationReceipt>;
   getBalance(address: Address): Promise<bigint>;
 }

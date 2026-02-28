@@ -96,11 +96,7 @@ export function registerSessionCommand(program: Command): void {
 
       console.log(`Session keys for ${options.wallet}:\n`);
       for (const session of sessions) {
-        const status = session.isRevoked
-          ? 'REVOKED'
-          : session.isActive
-            ? 'ACTIVE'
-            : 'EXPIRED';
+        const status = session.isRevoked ? 'REVOKED' : session.isActive ? 'ACTIVE' : 'EXPIRED';
         console.log(`  ${session.id}`);
         console.log(`    Label: ${session.label}`);
         console.log(`    Address: ${session.sessionKeyAddress}`);
@@ -122,21 +118,19 @@ export function registerSessionCommand(program: Command): void {
 
   addGlobalOptions(revokeCmd);
 
-  revokeCmd.action(
-    async (options: { wallet: string; session: string; dryRun?: boolean }) => {
-      try {
-        if (options.dryRun) {
-          console.log(`Dry run: would revoke session ${options.session}`);
-          return;
-        }
-
-        const wallet = new AgenticWallet();
-        wallet.revokeSession(options.wallet as Address, options.session);
-
-        console.log(`Session ${options.session} has been revoked.`);
-      } catch (error) {
-        handleError(error);
+  revokeCmd.action(async (options: { wallet: string; session: string; dryRun?: boolean }) => {
+    try {
+      if (options.dryRun) {
+        console.log(`Dry run: would revoke session ${options.session}`);
+        return;
       }
-    },
-  );
+
+      const wallet = new AgenticWallet();
+      wallet.revokeSession(options.wallet as Address, options.session);
+
+      console.log(`Session ${options.session} has been revoked.`);
+    } catch (error) {
+      handleError(error);
+    }
+  });
 }

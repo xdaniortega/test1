@@ -19,7 +19,10 @@ export function validateProvider(provider: string): asserts provider is Provider
 
 export function validateAddress(address: string, label = 'Address'): void {
   if (!isAddress(address)) {
-    throw new AgenticWalletError(`${label} is not a valid Ethereum address: ${address}`, 'INVALID_ADDRESS');
+    throw new AgenticWalletError(
+      `${label} is not a valid Ethereum address: ${address}`,
+      'INVALID_ADDRESS',
+    );
   }
 }
 

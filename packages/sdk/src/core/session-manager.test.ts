@@ -88,11 +88,7 @@ describe('SessionManager', () => {
       password,
     );
 
-    const privateKey = await manager.getSessionPrivateKey(
-      walletAddress,
-      session.info.id,
-      password,
-    );
+    const privateKey = await manager.getSessionPrivateKey(walletAddress, session.info.id, password);
     expect(privateKey).toBeDefined();
     expect(privateKey.startsWith('0x')).toBe(true);
     expect(privateKey.length).toBe(66);

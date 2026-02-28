@@ -1,13 +1,10 @@
-import {
-  type Address,
-  type Chain,
-  type Hash,
-  type Hex,
-  createPublicClient,
-  http,
-} from 'viem';
+import { type Address, type Chain, type Hash, type Hex, createPublicClient, http } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
-import { type BundlerProvider, type GasEstimate, type UserOperationReceipt } from '../types/provider.js';
+import {
+  type BundlerProvider,
+  type GasEstimate,
+  type UserOperationReceipt,
+} from '../types/provider.js';
 import { type TransactionRequest, type TransactionResult } from '../types/wallet.js';
 import { ProviderError } from '../types/errors.js';
 
@@ -27,7 +24,10 @@ export class ZeroDevProvider implements BundlerProvider {
 
   private ensureInitialized(): void {
     if (!this.chain || !this.apiKey || !this.rpcUrl) {
-      throw new ProviderError('ZeroDev provider not initialized. Call initialize() first.', this.name);
+      throw new ProviderError(
+        'ZeroDev provider not initialized. Call initialize() first.',
+        this.name,
+      );
     }
   }
 

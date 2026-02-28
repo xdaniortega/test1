@@ -10,20 +10,20 @@ npm install -g @arbitrum/agentic-wallets-cli
 
 ## Environment Variables
 
-| Variable                   | Required | Description                              |
-| -------------------------- | -------- | ---------------------------------------- |
+| Variable                   | Required | Description                                |
+| -------------------------- | -------- | ------------------------------------------ |
 | `ARBITRUM_WALLET_API_KEY`  | Yes      | API key for the bundler/paymaster provider |
-| `ARBITRUM_WALLET_PASSWORD` | Yes      | Password for encrypting/decrypting keys  |
+| `ARBITRUM_WALLET_PASSWORD` | Yes      | Password for encrypting/decrypting keys    |
 
 ## Global Options
 
 All commands accept:
 
-| Option                          | Default        | Description                        |
-| ------------------------------- | -------------- | ---------------------------------- |
-| `-n, --network <network>`       | `arbitrum-one` | Network (`arbitrum-one` or `arbitrum-sepolia`) |
-| `-p, --provider <provider>`     | `alchemy`      | Provider (`alchemy` or `zerodev`)  |
-| `--dry-run`                     | `false`        | Simulate the operation without executing |
+| Option                      | Default        | Description                                    |
+| --------------------------- | -------------- | ---------------------------------------------- |
+| `-n, --network <network>`   | `arbitrum-one` | Network (`arbitrum-one` or `arbitrum-sepolia`) |
+| `-p, --provider <provider>` | `alchemy`      | Provider (`alchemy` or `zerodev`)              |
+| `--dry-run`                 | `false`        | Simulate the operation without executing       |
 
 ## Commands
 
@@ -64,8 +64,8 @@ arbitrum-wallet import 0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7
   --network arbitrum-sepolia
 ```
 
-| Argument        | Description                      |
-| --------------- | -------------------------------- |
+| Argument        | Description                             |
+| --------------- | --------------------------------------- |
 | `<private-key>` | Private key to import (0x-prefixed hex) |
 
 ### `arbitrum-wallet balance <address>`
@@ -80,8 +80,8 @@ arbitrum-wallet balance 0x1234567890abcdef1234567890abcdef12345678 \
   --network arbitrum-sepolia
 ```
 
-| Argument    | Description            |
-| ----------- | ---------------------- |
+| Argument    | Description             |
+| ----------- | ----------------------- |
 | `<address>` | Wallet address to check |
 
 **Output:**
@@ -127,13 +127,13 @@ arbitrum-wallet send \
   --dry-run
 ```
 
-| Option                | Required | Description                            |
-| --------------------- | -------- | -------------------------------------- |
-| `-w, --wallet <id>`   | Yes      | Wallet ID (owner address)              |
-| `-t, --to <address>`  | Yes      | Recipient address                      |
-| `-v, --value <ether>` | No       | Value to send in ETH (default: `0`)    |
-| `-d, --data <hex>`    | No       | Transaction calldata (hex-encoded)     |
-| `--sponsor-gas`       | No       | Request gas sponsorship via paymaster  |
+| Option                | Required | Description                           |
+| --------------------- | -------- | ------------------------------------- |
+| `-w, --wallet <id>`   | Yes      | Wallet ID (owner address)             |
+| `-t, --to <address>`  | Yes      | Recipient address                     |
+| `-v, --value <ether>` | No       | Value to send in ETH (default: `0`)   |
+| `-d, --data <hex>`    | No       | Transaction calldata (hex-encoded)    |
+| `--sponsor-gas`       | No       | Request gas sponsorship via paymaster |
 
 **Output:**
 
@@ -200,13 +200,13 @@ arbitrum-wallet session create \
   --max-value 1000000000000000000
 ```
 
-| Option                    | Required | Default | Description                               |
-| ------------------------- | -------- | ------- | ----------------------------------------- |
-| `-w, --wallet <address>`  | Yes      | -       | Wallet address                            |
-| `-l, --label <label>`     | Yes      | -       | Human-readable label                      |
-| `-d, --duration <seconds>`| No       | `3600`  | Session duration in seconds               |
-| `-t, --targets <addrs>`   | No       | all     | Comma-separated allowed target addresses  |
-| `--max-value <wei>`       | No       | none    | Maximum value per transaction in wei      |
+| Option                     | Required | Default | Description                              |
+| -------------------------- | -------- | ------- | ---------------------------------------- |
+| `-w, --wallet <address>`   | Yes      | -       | Wallet address                           |
+| `-l, --label <label>`      | Yes      | -       | Human-readable label                     |
+| `-d, --duration <seconds>` | No       | `3600`  | Session duration in seconds              |
+| `-t, --targets <addrs>`    | No       | all     | Comma-separated allowed target addresses |
+| `--max-value <wei>`        | No       | none    | Maximum value per transaction in wei     |
 
 **Output:**
 
@@ -264,10 +264,10 @@ arbitrum-wallet session revoke \
   --session 550e8400-e29b-41d4-a716-446655440000
 ```
 
-| Option                    | Required | Description          |
-| ------------------------- | -------- | -------------------- |
-| `-w, --wallet <address>`  | Yes      | Wallet address       |
-| `-s, --session <id>`      | Yes      | Session key ID       |
+| Option                   | Required | Description    |
+| ------------------------ | -------- | -------------- |
+| `-w, --wallet <address>` | Yes      | Wallet address |
+| `-s, --session <id>`     | Yes      | Session key ID |
 
 **Output:**
 

@@ -1,9 +1,5 @@
 import { type Command } from 'commander';
-import {
-  AgenticWallet,
-  type SupportedNetwork,
-  type ProviderType,
-} from '@arbitrum/agentic-wallets';
+import { AgenticWallet, type SupportedNetwork, type ProviderType } from '@arbitrum/agentic-wallets';
 import { type Address } from 'viem';
 import { addGlobalOptions, handleError, requireApiKey } from './common.js';
 

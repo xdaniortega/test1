@@ -23,9 +23,9 @@ Initialize the wallet with network and provider configuration. Must be called be
 ```typescript
 await wallet.initialize({
   network: 'arbitrum-one', // or 'arbitrum-sepolia'
-  provider: 'alchemy',     // or 'zerodev'
+  provider: 'alchemy', // or 'zerodev'
   apiKey: 'your-api-key',
-  salt: 0n,                // optional: for deterministic addresses
+  salt: 0n, // optional: for deterministic addresses
 });
 ```
 
@@ -82,18 +82,14 @@ const balance = await wallet.getBalance('0x...');
 Send a transaction (UserOperation) from a wallet.
 
 ```typescript
-const result = await wallet.sendTransaction(
-  '0xowner...',
-  'password',
-  {
-    calls: [
-      { to: '0xrecipient', value: 1000000000000000n },
-      { to: '0xcontract', data: '0x...' },
-    ],
-    sponsorGas: true,  // optional: use paymaster
-    dryRun: false,     // optional: simulate only
-  },
-);
+const result = await wallet.sendTransaction('0xowner...', 'password', {
+  calls: [
+    { to: '0xrecipient', value: 1000000000000000n },
+    { to: '0xcontract', data: '0x...' },
+  ],
+  sponsorGas: true, // optional: use paymaster
+  dryRun: false, // optional: simulate only
+});
 // result.userOpHash        - UserOperation hash
 // result.transactionHash   - On-chain tx hash (after inclusion)
 // result.success           - Whether the operation succeeded
@@ -205,8 +201,8 @@ Revoke a session key.
 
 ```typescript
 interface WalletConfig {
-  network: SupportedNetwork;    // 'arbitrum-one' | 'arbitrum-sepolia'
-  provider: ProviderType;       // 'alchemy' | 'zerodev'
+  network: SupportedNetwork; // 'arbitrum-one' | 'arbitrum-sepolia'
+  provider: ProviderType; // 'alchemy' | 'zerodev'
   apiKey: string;
   salt?: bigint;
 }
@@ -282,8 +278,8 @@ interface SessionKeyPermissions {
 ```typescript
 interface SessionKeyConfig {
   label: string;
-  validAfter: number;   // unix timestamp (seconds)
-  validUntil: number;   // unix timestamp (seconds)
+  validAfter: number; // unix timestamp (seconds)
+  validUntil: number; // unix timestamp (seconds)
   permissions: SessionKeyPermissions;
 }
 ```
@@ -318,10 +314,7 @@ interface BundlerProvider {
     calls: TransactionRequest[],
     options?: { sponsorGas?: boolean },
   ): Promise<TransactionResult>;
-  estimateUserOperationGas(
-    ownerPrivateKey: Hex,
-    calls: TransactionRequest[],
-  ): Promise<GasEstimate>;
+  estimateUserOperationGas(ownerPrivateKey: Hex, calls: TransactionRequest[]): Promise<GasEstimate>;
   waitForUserOperationReceipt(userOpHash: Hash): Promise<UserOperationReceipt>;
   getBalance(address: Address): Promise<bigint>;
 }

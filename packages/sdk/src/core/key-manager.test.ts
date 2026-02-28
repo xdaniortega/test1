@@ -44,16 +44,14 @@ describe('KeyManager', () => {
     });
 
     it('should reject invalid private keys', async () => {
-      await expect(
-        km.encryptPrivateKey('0x123' as `0x${string}`, password),
-      ).rejects.toThrow('Invalid private key');
+      await expect(km.encryptPrivateKey('0x123' as `0x${string}`, password)).rejects.toThrow(
+        'Invalid private key',
+      );
     });
 
     it('should reject short passwords', async () => {
       const key = km.generatePrivateKey();
-      await expect(km.encryptPrivateKey(key, 'short')).rejects.toThrow(
-        'at least 8 characters',
-      );
+      await expect(km.encryptPrivateKey(key, 'short')).rejects.toThrow('at least 8 characters');
     });
   });
 });

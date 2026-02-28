@@ -40,9 +40,7 @@ describe('validation', () => {
 
   describe('validateAddress', () => {
     it('should accept valid addresses', () => {
-      expect(() =>
-        validateAddress('0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045'),
-      ).not.toThrow();
+      expect(() => validateAddress('0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045')).not.toThrow();
     });
 
     it('should reject invalid addresses', () => {
@@ -54,9 +52,7 @@ describe('validation', () => {
   describe('validatePrivateKey', () => {
     it('should accept valid private keys', () => {
       expect(() =>
-        validatePrivateKey(
-          '0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80',
-        ),
+        validatePrivateKey('0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80'),
       ).not.toThrow();
     });
 

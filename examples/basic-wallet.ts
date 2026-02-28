@@ -61,14 +61,10 @@ async function main() {
   const RECIPIENT = '0x0000000000000000000000000000000000000001' as Address;
   console.log('Simulating a transaction (dry run)...');
 
-  const result = await wallet.sendTransaction(
-    info.ownerAddress.toLowerCase(),
-    PASSWORD,
-    {
-      calls: [{ to: RECIPIENT, value: 0n }],
-      dryRun: true,
-    },
-  );
+  const result = await wallet.sendTransaction(info.ownerAddress.toLowerCase(), PASSWORD, {
+    calls: [{ to: RECIPIENT, value: 0n }],
+    dryRun: true,
+  });
 
   console.log(`  Simulation result: ${result.success ? 'Success' : 'Failed'}`);
 }

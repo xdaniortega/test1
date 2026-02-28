@@ -7,7 +7,11 @@ import {
   type TransactionResult,
 } from '../types/wallet.js';
 import { type BundlerProvider } from '../types/provider.js';
-import { type SessionKeyConfig, type SessionKeyInfo, type SessionKeyData } from '../types/session.js';
+import {
+  type SessionKeyConfig,
+  type SessionKeyInfo,
+  type SessionKeyData,
+} from '../types/session.js';
 import { type StoredWallet } from '../types/keystore.js';
 import { getChain, type SupportedNetwork } from '../types/chain.js';
 import { AgenticWalletError } from '../types/errors.js';

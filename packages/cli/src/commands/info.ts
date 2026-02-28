@@ -11,10 +11,7 @@ export function registerInfoCommand(program: Command): void {
   addGlobalOptions(cmd);
 
   cmd.action(
-    async (
-      walletId: string,
-      options: { network: string; provider: string; dryRun?: boolean },
-    ) => {
+    async (walletId: string, options: { network: string; provider: string; dryRun?: boolean }) => {
       try {
         const apiKey = requireApiKey();
 
@@ -49,11 +46,7 @@ export function registerInfoCommand(program: Command): void {
         if (sessions.length > 0) {
           console.log(`\n  Session Keys: ${sessions.length}`);
           for (const session of sessions) {
-            const status = session.isRevoked
-              ? 'REVOKED'
-              : session.isActive
-                ? 'ACTIVE'
-                : 'EXPIRED';
+            const status = session.isRevoked ? 'REVOKED' : session.isActive ? 'ACTIVE' : 'EXPIRED';
             console.log(`    - ${session.label} (${status})`);
           }
         }
