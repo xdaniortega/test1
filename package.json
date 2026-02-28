@@ -1,0 +1,26 @@
+{
+  "name": "@arbitrum/agentic-wallets-monorepo",
+  "private": true,
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "turbo run build",
+    "test": "turbo run test",
+    "lint": "turbo run lint",
+    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\"",
+    "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md}\"",
+    "clean": "turbo run clean"
+  },
+  "devDependencies": {
+    "@types/node": "^25.3.2",
+    "eslint": "^9.22.0",
+    "prettier": "^3.5.0",
+    "turbo": "^2.5.0",
+    "typescript": "^5.7.0"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "packageManager": "npm@11.8.0"
+}

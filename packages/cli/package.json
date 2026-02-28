@@ -1,0 +1,33 @@
+{
+  "name": "@arbitrum/agentic-wallets-cli",
+  "version": "0.1.0",
+  "description": "CLI for managing AI agent wallets on Arbitrum",
+  "type": "module",
+  "bin": {
+    "arbitrum-wallet": "./dist/index.js"
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest run",
+    "lint": "eslint src/",
+    "clean": "rm -rf dist .turbo"
+  },
+  "dependencies": {
+    "@arbitrum/agentic-wallets": "*",
+    "commander": "^13.1.0",
+    "chalk": "^5.4.0",
+    "ora": "^8.2.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.0",
+    "vitest": "^3.0.0",
+    "typescript-eslint": "^8.28.0",
+    "eslint": "^9.22.0"
+  },
+  "license": "MIT"
+}
