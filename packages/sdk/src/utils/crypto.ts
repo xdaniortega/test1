@@ -4,7 +4,7 @@ import { type EncryptedKeyData } from '../types/keystore.js';
 import { KeyManagementError } from '../types/errors.js';
 
 const ALGORITHM = 'aes-256-gcm';
-const SCRYPT_N = 2 ** 18;
+const SCRYPT_N = 2 ** 14;
 const SCRYPT_R = 8;
 const SCRYPT_P = 1;
 const KEY_LENGTH = 32;
