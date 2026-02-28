@@ -1,65 +1,81 @@
-# Architecture Decision Document
+# Architecture
 
-## Overview
+## The Problem
 
-This document explains the architectural decisions behind `@arbitrum/agentic-wallets`, focusing on the choice of account abstraction standards, provider design, and security model.
+AI agents need on-chain wallets. But traditional key management is dangerous for agents:
 
-## ERC-4337 vs ERC-7702
+- An agent with an unscoped private key can drain the entire wallet
+- There's no way to limit what contracts an agent can call, how much it can spend, or when it can operate
+- Agents running autonomously need gasless execution — they can't stop to get ETH for gas
+- Vendor lock-in to a single infrastructure provider is risky
 
-### ERC-4337: Account Abstraction via UserOperations
+This SDK solves these problems with account abstraction, session keys, and a provider-agnostic architecture.
 
-ERC-4337 introduces smart contract wallets (smart accounts) that are controlled by an EntryPoint contract. Transactions are sent as `UserOperations` through a separate mempool, processed by bundlers, and optionally sponsored by paymasters.
+## Account Abstraction: ERC-4337 vs ERC-7702
 
-**Key properties:**
+### ERC-4337 — Smart Contract Wallets (Primary)
 
-- Smart accounts are contracts deployed on-chain
-- Transactions go through bundlers, not directly to the network
-- Gas can be sponsored by paymasters (gasless transactions for users)
-- Native support for batched transactions
-- Session keys and permission scoping via validation modules
-- Counterfactual addresses: the account address is known before deployment
+ERC-4337 is the primary standard used by this SDK. Here's why:
 
-### ERC-7702: Set EOA Code
+**How it works:**
 
-ERC-7702 allows an EOA (Externally Owned Account) to temporarily delegate its execution to a smart contract by setting code on the EOA address. This is a protocol-level change introduced in the Pectra upgrade.
+1. Agent wallets are smart contracts (not EOAs)
+2. Transactions are packed as `UserOperations` and sent to a bundler
+3. The bundler submits them to the EntryPoint contract on-chain
+4. Paymasters can sponsor gas, so the agent wallet doesn't need ETH
+5. Smart accounts support batching — multiple calls in one atomic transaction
 
-**Key properties:**
+**Why we chose it for agents:**
 
-- Works with existing EOAs (no new account creation needed)
-- Temporary code delegation per transaction
-- Lower gas costs (no separate account deployment)
-- Compatible with ERC-4337 validation logic
-- Requires Pectra upgrade support on the network
+- **New accounts** — Agents need fresh wallets, not delegation from existing EOAs. ERC-4337's counterfactual deployment (address known before deployment) is perfect for this.
+- **Session keys** — Smart account validation modules enable scoped, time-limited, revocable session keys. This is the core security primitive for agent wallets.
+- **Gas sponsorship** — Paymasters are native to ERC-4337. Agents can operate without pre-funded ETH.
+- **Batching** — Execute approve + swap in a single UserOperation. Critical for DeFi agent workflows.
+- **Mature ecosystem** — Alchemy, ZeroDev, Pimlico, Biconomy all support it in production.
 
-### Our Choice: ERC-4337 Primary, ERC-7702 Ready
+### ERC-7702 — EOA Code Delegation (Via Ambire)
 
-We chose **ERC-4337 as the primary standard** for the following reasons:
+ERC-7702 was introduced with Ethereum's Pectra upgrade (May 2025). It allows an EOA to temporarily delegate its execution to a smart contract.
 
-1. **Production readiness** - ERC-4337 has a mature ecosystem with multiple bundler and paymaster providers (Alchemy, ZeroDev, Pimlico, Biconomy). ERC-7702 is newer and the tooling is still maturing.
+**How it works:**
 
-2. **Agent wallets are new accounts** - AI agents typically need fresh wallets, not delegation from existing EOAs. ERC-4337's counterfactual deployment model fits this use case perfectly.
+1. An EOA sets a "delegation designator" pointing to a smart contract
+2. For that transaction, the EOA behaves like a smart account
+3. After the transaction, the EOA can revert to normal behavior
+4. No separate account deployment needed
 
-3. **Session keys** - ERC-4337 smart accounts support modular validation, enabling session keys with scoped permissions (time-limited, contract-limited, value-limited). This is critical for AI agents that should operate with minimal privileges.
+**Where it fits:**
 
-4. **Gas sponsorship** - Paymaster support is native to ERC-4337. Agents can have their gas sponsored, removing the need to pre-fund every agent wallet with ETH.
+- Agents that need to use an **existing EOA address** (e.g., an address that already holds tokens)
+- Lower gas costs than deploying a new smart account
+- Ambire's hybrid AA approach combines ERC-4337 + ERC-7702 in a single wallet
 
-5. **Batched transactions** - Smart accounts can execute multiple calls atomically in a single UserOperation, which is common for agent workflows.
+**Why it's not the primary standard:**
 
-The architecture is designed so that ERC-7702 support can be added as an alternative account type in the future without breaking changes.
+- Newer, less battle-tested tooling
+- The "root" EOA key cannot be revoked under ERC-7702 — session key management is more limited
+- Agent wallets are typically fresh accounts, not existing EOAs
 
-## Provider Abstraction
+The SDK is designed so that ERC-7702 support via Ambire's hybrid model is available today, and deeper native ERC-7702 support can be added without breaking changes.
 
-### Design
+## Provider Architecture
 
-The SDK uses the `BundlerProvider` interface to abstract away the specifics of different bundler/paymaster services:
+### The BundlerProvider Interface
+
+Every bundler/paymaster provider implements one interface:
 
 ```typescript
 interface BundlerProvider {
   readonly name: string;
+
   initialize(chain: Chain, apiKey: string): Promise<void>;
+
+  // Account management
   createSmartAccount(ownerPrivateKey: Hex, salt?: bigint): Promise<Address>;
   getSmartAccountAddress(ownerPrivateKey: Hex, salt?: bigint): Promise<Address>;
   isAccountDeployed(address: Address): Promise<boolean>;
+
+  // Transaction execution
   sendUserOperation(
     ownerPrivateKey: Hex,
     calls: TransactionRequest[],
@@ -67,75 +83,136 @@ interface BundlerProvider {
   ): Promise<TransactionResult>;
   estimateUserOperationGas(ownerPrivateKey: Hex, calls: TransactionRequest[]): Promise<GasEstimate>;
   waitForUserOperationReceipt(userOpHash: Hash): Promise<UserOperationReceipt>;
+
+  // Read operations
   getBalance(address: Address): Promise<bigint>;
 }
 ```
 
-### Why This Approach
+### Why This Design
 
-- **Vendor independence** - Users can switch between Alchemy, ZeroDev, or any future provider by changing a single configuration value
-- **Testability** - The interface can be mocked in tests without requiring API keys or network access
-- **Extensibility** - Adding a new provider (e.g., Pimlico, Biconomy) requires implementing one interface
+**Vendor independence.** Changing providers is a one-line config change:
+
+```typescript
+// Switch from Alchemy to Ambire — zero code changes
+await wallet.initialize({
+  provider: 'ambire', // was 'alchemy'
+  ...
+});
+```
+
+**Testability.** Mock the interface in tests without network calls:
+
+```typescript
+const mockProvider: BundlerProvider = {
+  name: 'mock',
+  sendUserOperation: async () => ({ userOpHash: '0x...', success: true }),
+  // ...
+};
+```
+
+**Extensibility.** Adding a new provider (Pimlico, Biconomy, etc.) means implementing one interface. No changes to the SDK core.
 
 ### Implemented Providers
 
-| Provider | Smart Account Type | Bundler Endpoint                              |
-| -------- | ------------------ | --------------------------------------------- |
-| Alchemy  | Simple Account     | `https://{network}.g.alchemy.com/v2/{apiKey}` |
-| ZeroDev  | Kernel v3          | `https://rpc.zerodev.app/api/v2/bundler/{id}` |
+| Provider    | Smart Account  | Bundler                        | Gas Sponsorship                 |
+| ----------- | -------------- | ------------------------------ | ------------------------------- |
+| **Alchemy** | Simple Account | `arb-mainnet.g.alchemy.com`    | Gas Manager policies            |
+| **ZeroDev** | Kernel v3      | `rpc.zerodev.app`              | Paymaster policies              |
+| **Ambire**  | AmbireAccount  | Relayer (`relayer.ambire.com`) | Gas Tank (~100 tokens accepted) |
 
-## Key Management & Security
+### Ambire's Hybrid Model
 
-### Encryption
+Ambire is unique because it was the first wallet to implement both ERC-4337 and ERC-7702. Their architecture:
 
-Private keys are encrypted at rest using **AES-256-GCM** with key derivation via **scrypt**:
+```
+Agent Key → AmbireAccount (smart contract)
+         ↓
+         Ambire Relayer → Arbitrum
+         ↑
+         Gas Tank (pay gas in USDC, DAI, etc.)
+```
 
-- **Algorithm**: AES-256-GCM (authenticated encryption)
-- **Key derivation**: scrypt with parameters N=16384, r=8, p=1, dkLen=32
-- **Random IV**: 16 bytes per encryption (non-deterministic)
-- **Authentication tag**: Prevents tampering with ciphertext
+Key differences from other providers:
 
-### Storage
+- **Gas Tank** — Instead of a per-transaction paymaster, Ambire uses a pre-paid gas pool. Deposit USDC once, pay gas across chains. Supports ~100 tokens.
+- **Relayer** — A backend service that handles broadcasting, nonce management, and MEV protection via Flashbots.
+- **Hybrid accounts** — Same address can operate as both EOA (ERC-7702) and smart account (ERC-4337), allowing gradual migration.
+- **Account recovery** — Built-in recovery mechanism with configurable timelocks and multiple signer keys.
 
-Encrypted keys are stored as JSON files in the user's filesystem:
+## Security Model
+
+### Key Encryption
+
+Private keys are never stored in plaintext. The encryption scheme:
+
+| Parameter      | Value                                                       |
+| -------------- | ----------------------------------------------------------- |
+| Algorithm      | AES-256-GCM (authenticated encryption with associated data) |
+| Key derivation | scrypt (N=16384, r=8, p=1, dkLen=32)                        |
+| IV             | 16 bytes, randomly generated per encryption                 |
+| Salt           | 32 bytes, randomly generated per encryption                 |
+| Auth tag       | 16 bytes, prevents ciphertext tampering                     |
+
+**Why AES-256-GCM:** Authenticated encryption ensures both confidentiality and integrity. If anyone tampers with the ciphertext, decryption fails with an authentication error rather than producing garbage output.
+
+**Why scrypt:** Memory-hard KDF that makes brute-force password attacks expensive. The parameters (N=16384) provide a good balance between security and responsiveness.
+
+### File Storage
+
+Encrypted keys are stored with restrictive permissions:
 
 ```
 ~/.arbitrum-wallets/
 ├── wallets/
-│   └── {owner-address}.json
+│   └── {owner-address}.json       # mode 0o600 (owner read/write only)
 └── sessions/
     └── {wallet-address}/
-        └── {session-id}.json
+        └── {session-id}.json       # mode 0o600
 ```
 
-### Session Keys
+Directories are created with mode `0o700` (owner access only).
 
-Session keys provide **least-privilege access** for AI agents:
+### Session Key Security
 
-- **Time-limited**: Valid only within a specified time window (`validAfter` to `validUntil`)
-- **Contract-limited**: Restrict which contracts the session key can interact with
-- **Value-limited**: Cap the maximum value per transaction or total across all transactions
-- **Revocable**: Sessions can be revoked immediately by the wallet owner
+Session keys implement the principle of least privilege:
 
-Session key private keys are encrypted with the same AES-256-GCM scheme as the main wallet key.
+1. **Time-bounded** — Every session has a `validAfter` and `validUntil` timestamp. Expired sessions cannot be used.
+2. **Contract-scoped** — `allowedTargets` restricts which contracts the session key can call. An agent trading on Uniswap can't suddenly call an arbitrary contract.
+3. **Value-capped** — `maxValuePerTransaction` and `maxTotalValue` prevent an agent from draining the wallet.
+4. **Operation-limited** — `maxTransactions` caps total operations.
+5. **Instant revocation** — `revokeSession()` immediately invalidates a session key.
+6. **Separate keys** — Each session generates its own private key, encrypted independently. Compromising a session key doesn't compromise the wallet.
+
+### Threat Model
+
+| Threat               | Mitigation                                               |
+| -------------------- | -------------------------------------------------------- |
+| Agent key compromise | Session keys limit blast radius (time, value, contracts) |
+| Storage breach       | Keys encrypted with AES-256-GCM; attacker needs password |
+| Rogue agent behavior | Spending caps and contract allowlists                    |
+| Password brute-force | scrypt KDF makes each attempt expensive                  |
+| Ciphertext tampering | GCM auth tag detects modification                        |
+| Session key leak     | Time-limited, immediately revocable, value-capped        |
 
 ## Technology Stack
 
-| Component    | Library/Tool    | Purpose                              |
-| ------------ | --------------- | ------------------------------------ |
-| Base library | viem            | Ethereum interactions, types, chains |
-| AA framework | permissionless  | ERC-4337 primitives                  |
-| Build        | TypeScript, tsc | Type-safe compilation                |
-| Test         | Vitest          | Unit testing                         |
-| Monorepo     | Turborepo       | Task orchestration                   |
-| CLI          | Commander.js    | Command-line parsing                 |
-| Formatting   | Prettier        | Code formatting                      |
-| Linting      | ESLint          | Code quality                         |
+| Component        | Choice           | Rationale                              |
+| ---------------- | ---------------- | -------------------------------------- |
+| Ethereum library | viem             | Type-safe, tree-shakeable, modern      |
+| AA primitives    | permissionless   | Lightweight ERC-4337 utilities         |
+| Build            | TypeScript + tsc | Strict mode, declaration maps          |
+| Testing          | Vitest           | Fast, ESM-native, compatible with viem |
+| Monorepo         | Turborepo        | Task orchestration, build caching      |
+| CLI framework    | Commander.js     | Mature, well-documented                |
+| Linting          | ESLint 9         | TypeScript-aware rules, flat config    |
+| Formatting       | Prettier         | Consistent code style                  |
 
-## Future Considerations
+## Roadmap
 
-1. **ERC-7702 support** - Add as an alternative account type for users with existing EOAs
-2. **On-chain session key validation** - Deploy session key validator modules on Arbitrum
-3. **Multi-sig support** - Allow multiple signers for high-value agent operations
-4. **Hardware wallet integration** - Support Ledger/Trezor as the owner key
-5. **Event subscriptions** - WebSocket-based monitoring of wallet activity
+1. **On-chain session key validation** — Deploy session key validator modules on Arbitrum that enforce permissions at the smart contract level, not just locally
+2. **ERC-7702 native mode** — Direct EOA delegation support without the Ambire relayer
+3. **Multi-sig for high-value operations** — Require multiple signers for policy changes and large transfers
+4. **Hardware wallet support** — Ledger/Trezor as the owner key for maximum security
+5. **Event monitoring** — WebSocket subscriptions for real-time wallet activity tracking
+6. **Action providers** — Composable DeFi actions (swap, lend, bridge) built on top of the wallet SDK

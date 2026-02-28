@@ -3,7 +3,7 @@ import { type SupportedNetwork, isSupportedNetwork } from '../types/chain.js';
 import { type ProviderType } from '../types/wallet.js';
 import { InvalidNetworkError, InvalidProviderError, AgenticWalletError } from '../types/errors.js';
 
-const VALID_PROVIDERS: ProviderType[] = ['alchemy', 'zerodev'];
+const VALID_PROVIDERS: ProviderType[] = ['alchemy', 'zerodev', 'ambire'];
 
 export function validateNetwork(network: string): asserts network is SupportedNetwork {
   if (!isSupportedNetwork(network)) {

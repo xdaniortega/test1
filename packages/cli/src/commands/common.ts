@@ -14,7 +14,7 @@ export function addGlobalOptions(cmd: Command): Command {
       'Network to use (arbitrum-one or arbitrum-sepolia)',
       'arbitrum-one',
     )
-    .option('-p, --provider <provider>', 'Provider to use (alchemy or zerodev)', 'alchemy')
+    .option('-p, --provider <provider>', 'Provider to use (alchemy, zerodev, or ambire)', 'alchemy')
     .option('--dry-run', 'Simulate the operation without executing');
 }
 

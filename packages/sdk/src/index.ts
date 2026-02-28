@@ -7,7 +7,12 @@ export { SessionManager } from './core/session-manager.js';
 export { AgenticWallet } from './core/wallet.js';
 
 // Providers
-export { createProvider, AlchemyProvider, ZeroDevProvider } from './providers/index.js';
+export {
+  createProvider,
+  AlchemyProvider,
+  ZeroDevProvider,
+  AmbireProvider,
+} from './providers/index.js';
 
 // Utils
 export { FileStorage } from './utils/storage.js';

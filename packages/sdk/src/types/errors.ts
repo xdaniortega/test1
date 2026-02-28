@@ -21,7 +21,7 @@ export class InvalidNetworkError extends AgenticWalletError {
 export class InvalidProviderError extends AgenticWalletError {
   constructor(provider: string) {
     super(
-      `Unsupported provider: "${provider}". Supported providers: alchemy, zerodev`,
+      `Unsupported provider: "${provider}". Supported providers: alchemy, zerodev, ambire`,
       'INVALID_PROVIDER',
     );
     this.name = 'InvalidProviderError';

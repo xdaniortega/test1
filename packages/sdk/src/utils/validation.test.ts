@@ -33,6 +33,10 @@ describe('validation', () => {
       expect(() => validateProvider('zerodev')).not.toThrow();
     });
 
+    it('should accept ambire', () => {
+      expect(() => validateProvider('ambire')).not.toThrow();
+    });
+
     it('should reject unsupported providers', () => {
       expect(() => validateProvider('pimlico')).toThrow('Unsupported provider');
     });

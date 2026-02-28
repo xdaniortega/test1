@@ -1,72 +1,72 @@
 /**
- * Basic Agent Wallet Example
+ * Basic Agent Wallet
  *
- * Demonstrates creating a new wallet, checking its balance,
- * and sending a simple ETH transfer.
+ * Creates an agent wallet on Arbitrum Sepolia, checks balance,
+ * and simulates a transaction. Works with any provider
+ * (Alchemy, ZeroDev, or Ambire).
  *
- * Prerequisites:
- *   - An Alchemy API key (or ZeroDev project ID)
- *   - Some testnet ETH on Arbitrum Sepolia for sending transactions
- *
- * Usage:
- *   npx tsx examples/basic-wallet.ts
+ * Run:
+ *   PROVIDER_API_KEY=your-key npx tsx examples/basic-wallet.ts
  */
 
 import { AgenticWallet } from '@arbitrum/agentic-wallets';
 import type { Address } from 'viem';
 
-const API_KEY = process.env['ALCHEMY_API_KEY'];
-const PASSWORD = 'example-secure-password-change-me';
+const API_KEY = process.env['PROVIDER_API_KEY'];
+const PASSWORD = 'change-this-in-production-min-8-chars';
+
+// Pick your provider: 'alchemy' | 'zerodev' | 'ambire'
+const PROVIDER = (process.env['PROVIDER'] ?? 'alchemy') as 'alchemy' | 'zerodev' | 'ambire';
 
 if (!API_KEY) {
-  console.error('Set ALCHEMY_API_KEY environment variable');
+  console.error('Usage: PROVIDER_API_KEY=your-key npx tsx examples/basic-wallet.ts');
+  console.error('Optional: PROVIDER=ambire (default: alchemy)');
   process.exit(1);
 }
 
 async function main() {
-  // 1. Create the wallet instance
   const wallet = new AgenticWallet();
 
-  // 2. Initialize with Arbitrum Sepolia (testnet) and Alchemy provider
+  // Initialize — change 'provider' to switch between Alchemy, ZeroDev, or Ambire
   await wallet.initialize({
     network: 'arbitrum-sepolia',
-    provider: 'alchemy',
+    provider: PROVIDER,
     apiKey: API_KEY!,
   });
 
-  console.log('Wallet SDK initialized on Arbitrum Sepolia\n');
+  console.log(`Initialized with ${PROVIDER} on Arbitrum Sepolia\n`);
 
-  // 3. Create a new agent wallet
-  const info = await wallet.createWallet(PASSWORD);
-  console.log('New wallet created:');
-  console.log(`  Smart Account: ${info.address}`);
-  console.log(`  Owner EOA:     ${info.ownerAddress}`);
-  console.log(`  Deployed:      ${info.isDeployed ? 'Yes' : 'No (counterfactual)'}`);
-  console.log();
+  // Create a new agent wallet
+  // The private key is generated and encrypted with AES-256-GCM automatically
+  const agent = await wallet.createWallet(PASSWORD);
+  console.log('Agent wallet created:');
+  console.log(`  Smart Account: ${agent.address}`);
+  console.log(`  Owner EOA:     ${agent.ownerAddress}`);
+  console.log(`  Provider:      ${agent.provider}`);
+  console.log(`  Deployed:      ${agent.isDeployed ? 'Yes' : 'No (counterfactual)'}\n`);
 
-  // 4. Check balance
-  const balance = await wallet.getBalance(info.address);
-  console.log(`Balance: ${balance.formatted} ${balance.symbol}`);
-  console.log();
+  // Check balance
+  const balance = await wallet.getBalance(agent.address);
+  console.log(`Balance: ${balance.formatted} ${balance.symbol}\n`);
 
-  // 5. List all wallets
-  const walletIds = wallet.listWallets();
-  console.log(`Stored wallets: ${walletIds.length}`);
-  for (const id of walletIds) {
+  // List stored wallets
+  const ids = wallet.listWallets();
+  console.log(`Stored wallets: ${ids.length}`);
+  for (const id of ids) {
     console.log(`  - ${id}`);
   }
   console.log();
 
-  // 6. Send a transaction (dry run - simulation only)
+  // Simulate a transaction (dry run — no gas needed)
   const RECIPIENT = '0x0000000000000000000000000000000000000001' as Address;
-  console.log('Simulating a transaction (dry run)...');
+  console.log('Simulating transaction (dry run)...');
 
-  const result = await wallet.sendTransaction(info.ownerAddress.toLowerCase(), PASSWORD, {
+  const result = await wallet.sendTransaction(agent.ownerAddress.toLowerCase(), PASSWORD, {
     calls: [{ to: RECIPIENT, value: 0n }],
     dryRun: true,
   });
 
-  console.log(`  Simulation result: ${result.success ? 'Success' : 'Failed'}`);
+  console.log(`  Result: ${result.success ? 'OK' : 'Failed'}`);
 }
 
 main().catch(console.error);

@@ -1,31 +1,30 @@
 /**
- * Gas-Sponsored Transactions Example
+ * Gas-Sponsored Transactions
  *
- * Demonstrates sending transactions with gas sponsorship via a paymaster.
- * When `sponsorGas: true` is set, the bundler provider requests the paymaster
- * to cover gas costs, so the agent wallet does not need to hold ETH for gas.
+ * Agent wallets shouldn't need pre-funded ETH to operate.
+ * With `sponsorGas: true`, the provider's paymaster covers gas:
  *
- * This is useful for:
- *   - Onboarding new agents without pre-funding gas
- *   - Subsidizing agent operations
- *   - Providing a gasless UX for agent-initiated transactions
+ *   - Alchemy: Gas Manager policies
+ *   - ZeroDev: Paymaster integration
+ *   - Ambire: Gas Tank (pay gas in USDC, DAI, or ~100 other tokens)
  *
- * Prerequisites:
- *   - An Alchemy API key with Gas Manager policy configured, or
- *     a ZeroDev project with paymaster enabled
+ * This example also shows batching — multiple calls in one
+ * atomic UserOperation.
  *
- * Usage:
- *   npx tsx examples/gas-sponsored.ts
+ * Run:
+ *   PROVIDER_API_KEY=your-key npx tsx examples/gas-sponsored.ts
+ *   PROVIDER_API_KEY=your-key PROVIDER=ambire npx tsx examples/gas-sponsored.ts
  */
 
 import { AgenticWallet } from '@arbitrum/agentic-wallets';
 import type { Address, Hex } from 'viem';
 
-const API_KEY = process.env['ALCHEMY_API_KEY'];
-const PASSWORD = 'example-secure-password-change-me';
+const API_KEY = process.env['PROVIDER_API_KEY'];
+const PASSWORD = 'change-this-in-production-min-8-chars';
+const PROVIDER = (process.env['PROVIDER'] ?? 'alchemy') as 'alchemy' | 'zerodev' | 'ambire';
 
 if (!API_KEY) {
-  console.error('Set ALCHEMY_API_KEY environment variable');
+  console.error('Usage: PROVIDER_API_KEY=your-key npx tsx examples/gas-sponsored.ts');
   process.exit(1);
 }
 
@@ -34,61 +33,59 @@ async function main() {
 
   await wallet.initialize({
     network: 'arbitrum-sepolia',
-    provider: 'alchemy',
+    provider: PROVIDER,
     apiKey: API_KEY!,
   });
 
-  console.log('Gas-Sponsored Transaction Demo\n');
+  console.log(`=== Gas-Sponsored Transactions (${PROVIDER}) ===\n`);
 
-  // 1. Create a wallet for the agent
-  const info = await wallet.createWallet(PASSWORD);
-  console.log(`Agent wallet: ${info.address}`);
-  console.log(`Owner:        ${info.ownerAddress}\n`);
+  // Create a fresh agent wallet — it has 0 ETH
+  const agent = await wallet.createWallet(PASSWORD);
+  console.log(`Agent wallet: ${agent.address}`);
+  console.log(`Owner:        ${agent.ownerAddress}`);
 
-  // 2. Check balance (should be 0 - the agent has no ETH)
-  const balance = await wallet.getBalance(info.address);
-  console.log(`Balance: ${balance.formatted} ${balance.symbol}`);
-  console.log('Agent has no ETH, but can still send gas-sponsored transactions.\n');
+  const balance = await wallet.getBalance(agent.address);
+  console.log(`Balance:      ${balance.formatted} ${balance.symbol}`);
+  console.log('The agent has no ETH, but can still transact via gas sponsorship.\n');
 
-  // 3. Send a gas-sponsored transaction (dry run)
+  // --- Single gasless transaction (dry run) ---
   const RECIPIENT = '0x0000000000000000000000000000000000000001' as Address;
 
-  console.log('Sending gas-sponsored transaction (dry run)...');
-  const result = await wallet.sendTransaction(info.ownerAddress.toLowerCase(), PASSWORD, {
+  console.log('1. Single gasless transaction (dry run)');
+  const result = await wallet.sendTransaction(agent.ownerAddress.toLowerCase(), PASSWORD, {
     calls: [{ to: RECIPIENT, value: 0n }],
     sponsorGas: true,
     dryRun: true,
   });
-  console.log(`  Result: ${result.success ? 'Success' : 'Failed'}\n`);
+  console.log(`   Result: ${result.success ? 'OK' : 'Failed'}\n`);
 
-  // 4. Batched gas-sponsored transaction (dry run)
-  // Smart accounts can batch multiple calls into a single UserOperation
-  const ERC20_TRANSFER_SELECTOR = '0xa9059cbb' as Hex;
-  const TOKEN_CONTRACT = '0x0000000000000000000000000000000000000002' as Address;
-  const DEX_ROUTER = '0x0000000000000000000000000000000000000003' as Address;
+  // --- Batched gasless transaction (dry run) ---
+  // Smart accounts can execute multiple calls atomically
+  // This is a common DeFi pattern: approve + swap in one tx
+  const APPROVE_SELECTOR = '0x095ea7b3' as Hex;
+  const SWAP_SELECTOR = '0x38ed1739' as Hex;
+  const TOKEN = '0x0000000000000000000000000000000000000002' as Address;
+  const ROUTER = '0x0000000000000000000000000000000000000003' as Address;
 
-  console.log('Sending batched gas-sponsored transaction (dry run)...');
-  console.log('  Call 1: ERC-20 approve on token contract');
-  console.log('  Call 2: Swap on DEX router');
+  console.log('2. Batched gasless transaction (dry run)');
+  console.log('   Call 1: ERC-20 approve → token contract');
+  console.log('   Call 2: Swap           → DEX router');
 
-  const batchResult = await wallet.sendTransaction(info.ownerAddress.toLowerCase(), PASSWORD, {
+  const batchResult = await wallet.sendTransaction(agent.ownerAddress.toLowerCase(), PASSWORD, {
     calls: [
-      {
-        to: TOKEN_CONTRACT,
-        data: ERC20_TRANSFER_SELECTOR,
-      },
-      {
-        to: DEX_ROUTER,
-        data: ERC20_TRANSFER_SELECTOR,
-      },
+      { to: TOKEN, data: APPROVE_SELECTOR },
+      { to: ROUTER, data: SWAP_SELECTOR },
     ],
     sponsorGas: true,
     dryRun: true,
   });
 
-  console.log(`  Result: ${batchResult.success ? 'Success' : 'Failed'}`);
-  console.log('\nBoth calls would execute atomically in a single UserOperation.');
-  console.log('Gas is covered by the paymaster - the agent wallet pays nothing.');
+  console.log(`   Result: ${batchResult.success ? 'OK' : 'Failed'}\n`);
+  console.log('Both calls execute atomically in one UserOperation.');
+  console.log('Gas is covered by the paymaster — the agent pays nothing.');
+  if (PROVIDER === 'ambire') {
+    console.log("With Ambire's Gas Tank, gas can be pre-paid in USDC or ~100 other tokens.");
+  }
 }
 
 main().catch(console.error);

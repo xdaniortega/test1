@@ -1,8 +1,10 @@
-# SDK API Reference
+# API Reference
 
-## `AgenticWallet`
+Complete reference for the `@arbitrum/agentic-wallets` SDK.
 
-The main class for managing agent wallets.
+## AgenticWallet
+
+The main entry point. Handles wallet creation, transactions, and session key management.
 
 ```typescript
 import { AgenticWallet } from '@arbitrum/agentic-wallets';
@@ -11,127 +13,136 @@ import { AgenticWallet } from '@arbitrum/agentic-wallets';
 ### Constructor
 
 ```typescript
-new AgenticWallet(storageDir?: string)
+const wallet = new AgenticWallet(storageDir?: string);
 ```
 
-- `storageDir` - Optional custom directory for storing wallet data. Defaults to `~/.arbitrum-wallets`.
+| Parameter    | Type     | Default               | Description                         |
+| ------------ | -------- | --------------------- | ----------------------------------- |
+| `storageDir` | `string` | `~/.arbitrum-wallets` | Directory for encrypted key storage |
 
-### `initialize(config: WalletConfig): Promise<void>`
+### initialize
 
-Initialize the wallet with network and provider configuration. Must be called before most operations.
+Set up the network and provider. Must be called before any wallet operation.
 
 ```typescript
 await wallet.initialize({
-  network: 'arbitrum-one', // or 'arbitrum-sepolia'
-  provider: 'alchemy', // or 'zerodev'
+  network: 'arbitrum-one', // 'arbitrum-one' | 'arbitrum-sepolia'
+  provider: 'ambire', // 'alchemy' | 'zerodev' | 'ambire'
   apiKey: 'your-api-key',
-  salt: 0n, // optional: for deterministic addresses
+  salt: 0n, // optional: deterministic address derivation
 });
 ```
 
-### `createWallet(password: string): Promise<WalletInfo>`
+**Throws:** `InvalidNetworkError`, `InvalidProviderError`
 
-Generate a new private key, encrypt it, compute the smart account address, and store the wallet.
+### createWallet
+
+Generate a new private key, encrypt it, compute the smart account address, and persist.
 
 ```typescript
-const info = await wallet.createWallet('my-secure-password');
-// info.address       - Smart account address
-// info.ownerAddress  - Owner EOA address
-// info.network       - Network name
-// info.provider      - Provider name
-// info.isDeployed    - Always false for new wallets
+const info = await wallet.createWallet('my-password');
 ```
 
-### `importWallet(privateKey: Hex, password: string): Promise<WalletInfo>`
+**Returns:** `WalletInfo` — address, ownerAddress, network, provider, isDeployed (always `false` for new wallets)
 
-Import an existing private key as a wallet.
+**Throws:** `AgenticWalletError` if not initialized
+
+### importWallet
+
+Import an existing private key. The key is encrypted and a smart account address is computed.
 
 ```typescript
-const info = await wallet.importWallet('0xabc...', 'my-secure-password');
+const info = await wallet.importWallet('0xprivatekey...', 'my-password');
 ```
 
-### `getWalletInfo(walletId: string): Promise<WalletInfo | null>`
+**Returns:** `WalletInfo` — same as `createWallet`, but `isDeployed` reflects actual on-chain status
 
-Retrieve stored wallet information by wallet ID (lowercase owner address).
+### getWalletInfo
+
+Look up a stored wallet by ID (lowercase owner address).
 
 ```typescript
-const info = await wallet.getWalletInfo('0xabc...');
+const info = await wallet.getWalletInfo('0xowner...');
+// Returns null if not found
 ```
 
-### `listWallets(): string[]`
+### listWallets
 
-List all stored wallet IDs.
+Get all stored wallet IDs.
 
 ```typescript
-const ids = wallet.listWallets();
+const ids = wallet.listWallets(); // ['0xabc...', '0xdef...']
 ```
 
-### `getBalance(address: Address): Promise<WalletBalance>`
+### getBalance
 
-Get the native ETH balance of an address.
+Query the native ETH balance of any address.
 
 ```typescript
-const balance = await wallet.getBalance('0x...');
-// balance.balance    - Balance in wei (bigint)
-// balance.formatted  - Human-readable string (e.g., "1.5")
-// balance.symbol     - "ETH"
+const balance = await wallet.getBalance('0xaddress...');
+// balance.balance    → 1500000000000000000n (wei)
+// balance.formatted  → '1.5'
+// balance.symbol     → 'ETH'
 ```
 
-### `sendTransaction(walletId, password, options): Promise<TransactionResult>`
+### sendTransaction
 
-Send a transaction (UserOperation) from a wallet.
+Send a UserOperation. Supports batching, gas sponsorship, and dry-run simulation.
 
 ```typescript
-const result = await wallet.sendTransaction('0xowner...', 'password', {
+const result = await wallet.sendTransaction('0xowner-lowercase', 'password', {
   calls: [
     { to: '0xrecipient', value: 1000000000000000n },
-    { to: '0xcontract', data: '0x...' },
+    { to: '0xcontract', data: '0xa9059cbb...' },
   ],
-  sponsorGas: true, // optional: use paymaster
-  dryRun: false, // optional: simulate only
+  sponsorGas: true, // use paymaster (optional)
+  dryRun: false, // simulate only (optional)
 });
-// result.userOpHash        - UserOperation hash
-// result.transactionHash   - On-chain tx hash (after inclusion)
-// result.success           - Whether the operation succeeded
+// result.userOpHash       → '0x...'
+// result.transactionHash  → '0x...' (after on-chain inclusion)
+// result.success          → true
 ```
 
-### `createSessionKey(walletAddress, config, password): Promise<SessionKeyData>`
+**Dry run:** When `dryRun: true`, the transaction is simulated (gas estimated) but not sent. Returns `{ userOpHash: '0x', success: true }` on successful simulation.
 
-Create a new session key with scoped permissions.
+### createSessionKey
+
+Create a session key with scoped permissions.
 
 ```typescript
 const session = await wallet.createSessionKey(
-  '0xwallet...',
+  '0xwallet-address',
   {
     label: 'trading-bot',
     validAfter: Math.floor(Date.now() / 1000),
     validUntil: Math.floor(Date.now() / 1000) + 3600,
     permissions: {
-      allowedTargets: ['0xcontract...'],
-      maxValuePerTransaction: 1000000000000000n,
-      maxTransactions: 100,
+      allowedTargets: ['0xrouter'],
+      maxValuePerTransaction: 100000000000000000n,
+      maxTransactions: 50,
     },
   },
   'password',
 );
-// session.info.id                 - Session UUID
-// session.info.sessionKeyAddress  - Session key public address
+// session.info.id                → 'uuid...'
+// session.info.sessionKeyAddress → '0x...'
+// session.info.isActive          → true
 ```
 
-### `listSessions(walletAddress: Address): SessionKeyInfo[]`
+### listSessions
 
-List all session keys for a wallet.
+List all session keys for a wallet. `isActive` is recalculated based on current time.
 
 ```typescript
 const sessions = wallet.listSessions('0xwallet...');
 for (const s of sessions) {
-  console.log(s.id, s.label, s.isActive, s.isRevoked);
+  console.log(s.id, s.label, s.isActive ? 'ACTIVE' : s.isRevoked ? 'REVOKED' : 'EXPIRED');
 }
 ```
 
-### `revokeSession(walletAddress: Address, sessionId: string): boolean`
+### revokeSession
 
-Revoke a session key.
+Immediately revoke a session key. Cannot be undone.
 
 ```typescript
 wallet.revokeSession('0xwallet...', 'session-uuid');
@@ -139,168 +150,174 @@ wallet.revokeSession('0xwallet...', 'session-uuid');
 
 ---
 
-## `KeyManager`
+## KeyManager
 
-Low-level key management. Used internally by `AgenticWallet` but available for direct use.
+Low-level key operations. Used internally by `AgenticWallet`, but available for direct use.
 
 ```typescript
 import { KeyManager } from '@arbitrum/agentic-wallets';
+const km = new KeyManager();
 ```
 
-### `generatePrivateKey(): Hex`
-
-Generate a cryptographically random private key.
-
-### `encryptPrivateKey(privateKey: Hex, password: string): Promise<EncryptedKeyData>`
-
-Encrypt a private key with AES-256-GCM using a password-derived key.
-
-### `decryptPrivateKey(encryptedData: EncryptedKeyData, password: string): Promise<Hex>`
-
-Decrypt an encrypted private key.
-
-### `getAddress(privateKey: Hex): Address`
-
-Derive the Ethereum address from a private key.
+| Method                                   | Returns                     | Description                                  |
+| ---------------------------------------- | --------------------------- | -------------------------------------------- |
+| `generatePrivateKey()`                   | `Hex`                       | Cryptographically random 32-byte private key |
+| `encryptPrivateKey(key, password)`       | `Promise<EncryptedKeyData>` | AES-256-GCM encryption with scrypt KDF       |
+| `decryptPrivateKey(encrypted, password)` | `Promise<Hex>`              | Decrypt with password                        |
+| `getAddress(key)`                        | `Address`                   | Derive Ethereum address from private key     |
 
 ---
 
-## `SessionManager`
+## SessionManager
 
-Low-level session key management.
+Low-level session key lifecycle. Used internally by `AgenticWallet`.
 
 ```typescript
 import { SessionManager } from '@arbitrum/agentic-wallets';
+const sm = new SessionManager();
 ```
 
-### `createSessionKey(walletAddress, config, password): Promise<SessionKeyData>`
+| Method                                       | Returns                   | Description                                             |
+| -------------------------------------------- | ------------------------- | ------------------------------------------------------- |
+| `createSessionKey(wallet, config, password)` | `Promise<SessionKeyData>` | Create and store a session key                          |
+| `listSessions(wallet)`                       | `SessionKeyInfo[]`        | List sessions (recalculates `isActive`)                 |
+| `getSession(wallet, id)`                     | `SessionKeyData \| null`  | Get a specific session                                  |
+| `getSessionPrivateKey(wallet, id, password)` | `Promise<Hex>`            | Decrypt session private key (throws if revoked/expired) |
+| `revokeSession(wallet, id)`                  | `boolean`                 | Revoke immediately                                      |
 
-Create and store a new session key.
+---
 
-### `listSessions(walletAddress: Address): SessionKeyInfo[]`
+## Providers
 
-List sessions for a wallet address.
+Provider classes that implement `BundlerProvider`. You rarely use these directly — `AgenticWallet` creates them via the factory.
 
-### `getSession(walletAddress, sessionId): SessionKeyData | null`
+```typescript
+import {
+  createProvider, // Factory function
+  AlchemyProvider,
+  ZeroDevProvider,
+  AmbireProvider,
+} from '@arbitrum/agentic-wallets';
 
-Get a specific session by ID.
+const provider = createProvider('ambire'); // returns AmbireProvider instance
+```
 
-### `getSessionPrivateKey(walletAddress, sessionId, password): Promise<Hex>`
-
-Decrypt and return a session key's private key. Throws if revoked or expired.
-
-### `revokeSession(walletAddress, sessionId): boolean`
-
-Revoke a session key.
+| Provider          | `name`      | Bundler Endpoint                       | Gas Sponsorship |
+| ----------------- | ----------- | -------------------------------------- | --------------- |
+| `AlchemyProvider` | `'alchemy'` | `arb-mainnet.g.alchemy.com/v2/{key}`   | Gas Manager     |
+| `ZeroDevProvider` | `'zerodev'` | `rpc.zerodev.app/api/v2/bundler/{key}` | Paymaster       |
+| `AmbireProvider`  | `'ambire'`  | `relayer.ambire.com/api/v2/{network}`  | Gas Tank        |
 
 ---
 
 ## Types
 
-### `WalletConfig`
+### WalletConfig
 
 ```typescript
 interface WalletConfig {
   network: SupportedNetwork; // 'arbitrum-one' | 'arbitrum-sepolia'
-  provider: ProviderType; // 'alchemy' | 'zerodev'
+  provider: ProviderType; // 'alchemy' | 'zerodev' | 'ambire'
   apiKey: string;
   salt?: bigint;
 }
 ```
 
-### `WalletInfo`
+### WalletInfo
 
 ```typescript
 interface WalletInfo {
-  address: Address;
-  isDeployed: boolean;
-  ownerAddress: Address;
+  address: Address; // Smart account address
+  isDeployed: boolean; // Has on-chain bytecode?
+  ownerAddress: Address; // Owner EOA
   network: SupportedNetwork;
   provider: ProviderType;
 }
 ```
 
-### `WalletBalance`
+### WalletBalance
 
 ```typescript
 interface WalletBalance {
   address: Address;
-  balance: bigint;
-  formatted: string;
-  symbol: string;
+  balance: bigint; // wei
+  formatted: string; // e.g. '1.5'
+  symbol: string; // 'ETH'
 }
 ```
 
-### `TransactionRequest`
+### TransactionRequest
 
 ```typescript
 interface TransactionRequest {
-  to: Address;
-  value?: bigint;
-  data?: Hex;
+  to: Address; // Target address
+  value?: bigint; // ETH in wei (default: 0)
+  data?: Hex; // Encoded calldata
 }
 ```
 
-### `TransactionResult`
+### TransactionResult
 
 ```typescript
 interface TransactionResult {
-  userOpHash: Hash;
-  transactionHash?: Hash;
+  userOpHash: Hash; // UserOperation hash
+  transactionHash?: Hash; // On-chain tx hash (after inclusion)
   success: boolean;
 }
 ```
 
-### `SendTransactionOptions`
+### SendTransactionOptions
 
 ```typescript
 interface SendTransactionOptions {
-  calls: TransactionRequest[];
-  sponsorGas?: boolean;
-  dryRun?: boolean;
+  calls: TransactionRequest[]; // One or more calls (batching supported)
+  sponsorGas?: boolean; // Use paymaster/Gas Tank
+  dryRun?: boolean; // Simulate only, don't send
 }
 ```
 
-### `SessionKeyPermissions`
+### SessionKeyPermissions
 
 ```typescript
 interface SessionKeyPermissions {
-  allowedTargets?: Address[];
-  allowedFunctions?: Record<string, Hex[]>;
-  maxValuePerTransaction?: bigint;
-  maxTotalValue?: bigint;
-  maxTransactions?: number;
+  allowedTargets?: Address[]; // Contract whitelist
+  allowedFunctions?: Record<string, Hex[]>; // Function selector whitelist per contract
+  maxValuePerTransaction?: bigint; // ETH cap per call
+  maxTotalValue?: bigint; // Cumulative ETH cap
+  maxTransactions?: number; // Max operations
 }
 ```
 
-### `SessionKeyConfig`
+### SessionKeyConfig
 
 ```typescript
 interface SessionKeyConfig {
-  label: string;
-  validAfter: number; // unix timestamp (seconds)
-  validUntil: number; // unix timestamp (seconds)
+  label: string; // Human-readable name
+  validAfter: number; // Unix timestamp (seconds)
+  validUntil: number; // Unix timestamp (seconds)
   permissions: SessionKeyPermissions;
 }
 ```
 
-### `SessionKeyInfo`
+### SessionKeyInfo
 
 ```typescript
 interface SessionKeyInfo {
-  id: string;
-  sessionKeyAddress: Address;
+  id: string; // UUID
+  sessionKeyAddress: Address; // Public address of session key
   label: string;
   validAfter: number;
   validUntil: number;
   permissions: SessionKeyPermissions;
-  isActive: boolean;
+  isActive: boolean; // Recalculated on read
   isRevoked: boolean;
   createdAt: number;
 }
 ```
 
-### `BundlerProvider`
+### BundlerProvider
+
+The abstract interface all providers implement. See [Architecture](./architecture.md) for design rationale.
 
 ```typescript
 interface BundlerProvider {
@@ -320,16 +337,30 @@ interface BundlerProvider {
 }
 ```
 
-### Error Classes
+---
 
-All errors extend `AgenticWalletError`:
+## Errors
 
-| Error Class            | Code                   | Description                    |
-| ---------------------- | ---------------------- | ------------------------------ |
-| `AgenticWalletError`   | (varies)               | Base error class               |
-| `InvalidNetworkError`  | `INVALID_NETWORK`      | Unsupported network specified  |
-| `InvalidProviderError` | `INVALID_PROVIDER`     | Unsupported provider specified |
-| `KeyManagementError`   | `KEY_MANAGEMENT_ERROR` | Key operation failed           |
-| `SessionKeyError`      | `SESSION_KEY_ERROR`    | Session key operation failed   |
-| `TransactionError`     | `TRANSACTION_ERROR`    | Transaction execution failed   |
-| `ProviderError`        | `PROVIDER_ERROR`       | Provider operation failed      |
+All errors extend `AgenticWalletError` and include a machine-readable `code` property.
+
+```typescript
+try {
+  await wallet.sendTransaction(...);
+} catch (error) {
+  if (error instanceof ProviderError) {
+    console.log(error.code);     // 'PROVIDER_ERROR'
+    console.log(error.provider); // 'ambire'
+    console.log(error.message);  // Human-readable description
+  }
+}
+```
+
+| Error Class            | Code                   | When                                                           |
+| ---------------------- | ---------------------- | -------------------------------------------------------------- |
+| `AgenticWalletError`   | varies                 | Base class for all SDK errors                                  |
+| `InvalidNetworkError`  | `INVALID_NETWORK`      | Network is not `arbitrum-one` or `arbitrum-sepolia`            |
+| `InvalidProviderError` | `INVALID_PROVIDER`     | Provider is not `alchemy`, `zerodev`, or `ambire`              |
+| `KeyManagementError`   | `KEY_MANAGEMENT_ERROR` | Key encryption/decryption failure                              |
+| `SessionKeyError`      | `SESSION_KEY_ERROR`    | Session creation, access, or revocation issue                  |
+| `TransactionError`     | `TRANSACTION_ERROR`    | Transaction execution failure                                  |
+| `ProviderError`        | `PROVIDER_ERROR`       | Bundler/paymaster operation failed (includes `provider` field) |

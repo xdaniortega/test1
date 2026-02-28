@@ -1,90 +1,74 @@
 # CLI Reference
 
-The `arbitrum-wallet` CLI provides command-line access to all SDK features.
+The `arbitrum-wallet` CLI wraps the SDK for terminal-based wallet management.
 
-## Installation
+## Install
 
 ```bash
 npm install -g @arbitrum/agentic-wallets-cli
 ```
 
-## Environment Variables
+## Setup
 
-| Variable                   | Required | Description                                |
-| -------------------------- | -------- | ------------------------------------------ |
-| `ARBITRUM_WALLET_API_KEY`  | Yes      | API key for the bundler/paymaster provider |
-| `ARBITRUM_WALLET_PASSWORD` | Yes      | Password for encrypting/decrypting keys    |
+Two environment variables are required:
+
+```bash
+export ARBITRUM_WALLET_API_KEY=your-provider-api-key   # Alchemy, ZeroDev, or Ambire API key
+export ARBITRUM_WALLET_PASSWORD=your-encryption-pass    # Used to encrypt/decrypt private keys
+```
 
 ## Global Options
 
-All commands accept:
+Every command accepts these flags:
 
-| Option                      | Default        | Description                                    |
-| --------------------------- | -------------- | ---------------------------------------------- |
-| `-n, --network <network>`   | `arbitrum-one` | Network (`arbitrum-one` or `arbitrum-sepolia`) |
-| `-p, --provider <provider>` | `alchemy`      | Provider (`alchemy` or `zerodev`)              |
-| `--dry-run`                 | `false`        | Simulate the operation without executing       |
+| Flag                        | Default        | Description                          |
+| --------------------------- | -------------- | ------------------------------------ |
+| `-n, --network <network>`   | `arbitrum-one` | `arbitrum-one` or `arbitrum-sepolia` |
+| `-p, --provider <provider>` | `alchemy`      | `alchemy`, `zerodev`, or `ambire`    |
+| `--dry-run`                 | off            | Simulate without executing           |
 
 ## Commands
 
-### `arbitrum-wallet create`
+### create
 
-Create a new agent wallet with a fresh private key.
+Create a new agent wallet. Generates a private key, encrypts it, and computes the smart account address.
 
 ```bash
-arbitrum-wallet create [options]
-
-# Examples
 arbitrum-wallet create
-arbitrum-wallet create --network arbitrum-sepolia
-arbitrum-wallet create --network arbitrum-sepolia --provider zerodev
+arbitrum-wallet create --network arbitrum-sepolia --provider ambire
 arbitrum-wallet create --dry-run
 ```
 
-**Output:**
+Output:
 
 ```
 Wallet created successfully!
   Address: 0x1234...5678
   Owner: 0xabcd...ef01
   Network: arbitrum-sepolia
-  Provider: alchemy
+  Provider: ambire
   Deployed: No (counterfactual)
 ```
 
-### `arbitrum-wallet import <private-key>`
+### import
 
 Import an existing private key as an agent wallet.
 
 ```bash
-arbitrum-wallet import <private-key> [options]
-
-# Example
-arbitrum-wallet import 0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80 \
-  --network arbitrum-sepolia
+arbitrum-wallet import 0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80
+arbitrum-wallet import 0xYourKey --network arbitrum-sepolia --provider zerodev
 ```
 
-| Argument        | Description                             |
-| --------------- | --------------------------------------- |
-| `<private-key>` | Private key to import (0x-prefixed hex) |
+### balance
 
-### `arbitrum-wallet balance <address>`
-
-Check the ETH balance of a wallet address.
+Check the ETH balance of any address.
 
 ```bash
-arbitrum-wallet balance <address> [options]
-
-# Example
-arbitrum-wallet balance 0x1234567890abcdef1234567890abcdef12345678 \
-  --network arbitrum-sepolia
+arbitrum-wallet balance 0xAddress
+arbitrum-wallet balance 0xAddress --network arbitrum-sepolia
 ```
 
-| Argument    | Description             |
-| ----------- | ----------------------- |
-| `<address>` | Wallet address to check |
-
-**Output:**
+Output:
 
 ```
 Balance for 0x1234...5678:
@@ -92,50 +76,33 @@ Balance for 0x1234...5678:
   (1500000000000000000 wei)
 ```
 
-### `arbitrum-wallet send`
+### send
 
-Send a transaction from an agent wallet.
+Send a transaction (UserOperation) from a wallet.
 
 ```bash
-arbitrum-wallet send [options]
-
 # Send ETH
-arbitrum-wallet send \
-  --wallet 0xOwnerAddress \
-  --to 0xRecipient \
-  --value 0.01 \
-  --network arbitrum-sepolia
+arbitrum-wallet send -w 0xOwner -t 0xRecipient -v 0.01
 
-# Send with gas sponsorship
-arbitrum-wallet send \
-  --wallet 0xOwnerAddress \
-  --to 0xRecipient \
-  --value 0.01 \
-  --sponsor-gas
+# With gas sponsorship (paymaster / Ambire Gas Tank)
+arbitrum-wallet send -w 0xOwner -t 0xRecipient -v 0.01 --sponsor-gas --provider ambire
 
-# Send with calldata
-arbitrum-wallet send \
-  --wallet 0xOwnerAddress \
-  --to 0xContract \
-  --data 0xa9059cbb...
+# With calldata
+arbitrum-wallet send -w 0xOwner -t 0xContract -d 0xa9059cbb...
 
 # Dry run (simulate only)
-arbitrum-wallet send \
-  --wallet 0xOwnerAddress \
-  --to 0xRecipient \
-  --value 0.01 \
-  --dry-run
+arbitrum-wallet send -w 0xOwner -t 0xRecipient -v 0.01 --dry-run
 ```
 
-| Option                | Required | Description                           |
-| --------------------- | -------- | ------------------------------------- |
-| `-w, --wallet <id>`   | Yes      | Wallet ID (owner address)             |
-| `-t, --to <address>`  | Yes      | Recipient address                     |
-| `-v, --value <ether>` | No       | Value to send in ETH (default: `0`)   |
-| `-d, --data <hex>`    | No       | Transaction calldata (hex-encoded)    |
-| `--sponsor-gas`       | No       | Request gas sponsorship via paymaster |
+| Flag                  | Required | Default | Description               |
+| --------------------- | -------- | ------- | ------------------------- |
+| `-w, --wallet <id>`   | Yes      | —       | Wallet ID (owner address) |
+| `-t, --to <address>`  | Yes      | —       | Recipient address         |
+| `-v, --value <ether>` | No       | `0`     | ETH amount to send        |
+| `-d, --data <hex>`    | No       | —       | Encoded calldata          |
+| `--sponsor-gas`       | No       | off     | Use paymaster for gas     |
 
-**Output:**
+Output:
 
 ```
 Transaction sent!
@@ -144,29 +111,23 @@ Transaction sent!
   Success: true
 ```
 
-### `arbitrum-wallet info <wallet-id>`
+### info
 
-Show detailed wallet information including session keys.
+Show wallet details and session key summary.
 
 ```bash
-arbitrum-wallet info <wallet-id> [options]
-
-# Example
-arbitrum-wallet info 0xowneraddress --network arbitrum-sepolia
+arbitrum-wallet info 0xowner-address
+arbitrum-wallet info 0xowner --network arbitrum-sepolia
 ```
 
-| Argument      | Description                          |
-| ------------- | ------------------------------------ |
-| `<wallet-id>` | Wallet ID (owner address, lowercase) |
-
-**Output:**
+Output:
 
 ```
 Wallet info:
   Address: 0x1234...5678
   Owner: 0xabcd...ef01
   Network: arbitrum-sepolia
-  Provider: alchemy
+  Provider: ambire
   Deployed: No (counterfactual)
 
   Session Keys: 2
@@ -174,41 +135,32 @@ Wallet info:
     - data-fetcher (EXPIRED)
 ```
 
-### `arbitrum-wallet session create`
+### session create
 
-Create a new session key with scoped permissions.
+Create a session key with scoped permissions.
 
 ```bash
-arbitrum-wallet session create [options]
+# 1 hour session (default)
+arbitrum-wallet session create -w 0xWallet -l "trading-bot"
 
-# Basic session (1 hour)
+# 24 hour session with contract restriction
 arbitrum-wallet session create \
-  --wallet 0xWalletAddress \
-  --label "trading-bot"
-
-# Custom duration (24 hours)
-arbitrum-wallet session create \
-  --wallet 0xWalletAddress \
-  --label "data-collector" \
-  --duration 86400
-
-# Restricted targets
-arbitrum-wallet session create \
-  --wallet 0xWalletAddress \
-  --label "uniswap-trader" \
-  --targets 0xRouter,0xFactory \
+  -w 0xWallet \
+  -l "uniswap-trader" \
+  -d 86400 \
+  -t 0xRouter,0xFactory \
   --max-value 1000000000000000000
 ```
 
-| Option                     | Required | Default | Description                              |
-| -------------------------- | -------- | ------- | ---------------------------------------- |
-| `-w, --wallet <address>`   | Yes      | -       | Wallet address                           |
-| `-l, --label <label>`      | Yes      | -       | Human-readable label                     |
-| `-d, --duration <seconds>` | No       | `3600`  | Session duration in seconds              |
-| `-t, --targets <addrs>`    | No       | all     | Comma-separated allowed target addresses |
-| `--max-value <wei>`        | No       | none    | Maximum value per transaction in wei     |
+| Flag                       | Required | Default   | Description                       |
+| -------------------------- | -------- | --------- | --------------------------------- |
+| `-w, --wallet <address>`   | Yes      | —         | Wallet address                    |
+| `-l, --label <label>`      | Yes      | —         | Human-readable label              |
+| `-d, --duration <seconds>` | No       | `3600`    | Session duration                  |
+| `-t, --targets <addrs>`    | No       | all       | Comma-separated allowed contracts |
+| `--max-value <wei>`        | No       | unlimited | Max ETH per transaction (wei)     |
 
-**Output:**
+Output:
 
 ```
 Session key created!
@@ -218,25 +170,18 @@ Session key created!
   Expires: 2026-03-01T12:00:00.000Z
 ```
 
-### `arbitrum-wallet session list`
+### session list
 
 List all session keys for a wallet.
 
 ```bash
-arbitrum-wallet session list [options]
-
-# Example
-arbitrum-wallet session list --wallet 0xWalletAddress
+arbitrum-wallet session list -w 0xWallet
 ```
 
-| Option                   | Required | Description    |
-| ------------------------ | -------- | -------------- |
-| `-w, --wallet <address>` | Yes      | Wallet address |
-
-**Output:**
+Output:
 
 ```
-Session keys for 0xWalletAddress:
+Session keys for 0xWallet:
 
   550e8400-e29b-41d4-a716-446655440000
     Label: trading-bot
@@ -251,25 +196,15 @@ Session keys for 0xWalletAddress:
     Expires: 2026-02-28T06:00:00.000Z
 ```
 
-### `arbitrum-wallet session revoke`
+### session revoke
 
 Revoke a session key immediately.
 
 ```bash
-arbitrum-wallet session revoke [options]
-
-# Example
-arbitrum-wallet session revoke \
-  --wallet 0xWalletAddress \
-  --session 550e8400-e29b-41d4-a716-446655440000
+arbitrum-wallet session revoke -w 0xWallet -s 550e8400-e29b-41d4-a716-446655440000
 ```
 
-| Option                   | Required | Description    |
-| ------------------------ | -------- | -------------- |
-| `-w, --wallet <address>` | Yes      | Wallet address |
-| `-s, --session <id>`     | Yes      | Session key ID |
-
-**Output:**
+Output:
 
 ```
 Session 550e8400-e29b-41d4-a716-446655440000 has been revoked.

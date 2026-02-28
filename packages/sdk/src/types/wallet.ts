@@ -12,7 +12,7 @@ export interface WalletConfig {
   salt?: bigint;
 }
 
-export type ProviderType = 'alchemy' | 'zerodev';
+export type ProviderType = 'alchemy' | 'zerodev' | 'ambire';
 
 export interface WalletInfo {
   /** Smart account address (counterfactual or deployed) */
